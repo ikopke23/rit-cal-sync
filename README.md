@@ -1,5 +1,7 @@
 # rit-cal-sync
 
+## Made entirely with Claude
+
 Syncs the RIT academic calendar into a Google Calendar. It scrapes the Fall and
 Spring term tables on [rit.edu/calendar](https://www.rit.edu/calendar) and
 reconciles them as all-day events, with reminders off.

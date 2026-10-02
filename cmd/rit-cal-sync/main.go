@@ -16,8 +16,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"golang.org/x/term"
 
 	"github.com/ikopke/rit-cal-sync/internal/config"
+	"github.com/ikopke/rit-cal-sync/internal/gcal"
 	"github.com/ikopke/rit-cal-sync/internal/scrape"
 )
 
@@ -44,7 +48,6 @@ func run(ctx context.Context) error {
 		fmt.Fprintln(os.Stdout, version)
 		return nil
 	}
-	_ = dryRun
 
 	cfg, err := config.Load(!*parseOnly)
 	if err != nil {
@@ -81,6 +84,56 @@ func run(ctx context.Context) error {
 		fmt.Fprintf(summary, "parsed=%d skipped=%d\n", len(events), len(skipped))
 		return nil
 	}
+	return syncEvents(ctx, cfg, events, len(skipped), *dryRun, summary)
+}
+
+// syncEvents reconciles events against the calendar. Writes go deletes first,
+// then updates, then creates; a failure part-way is safe because the next run
+// reconciles whatever is left.
+func syncEvents(ctx context.Context, cfg config.Config, events []scrape.Event, skipped int, dryRun bool, summary io.Writer) error {
+	slog.Info("syncing", "calendar", cfg.CalendarID, "events", len(events), "today", time.Now().In(cfg.Timezone).Format(time.DateOnly))
+	svc, err := gcal.NewService(ctx, cfg.CredentialsFile, cfg.TokenFile, os.Stdin, os.Stderr, term.IsTerminal(int(os.Stdin.Fd())))
+	if err != nil {
+		return err
+	}
+	client := gcal.NewClient(svc, cfg.CalendarID)
+	existing, err := client.ListMarked(ctx)
+	if err != nil {
+		return err
+	}
+	a := gcal.Plan(events, existing)
+	for _, x := range a.Delete {
+		slog.Info("delete", "title", x.Title, "term", x.TermID, "start", x.Start.Format(time.DateOnly), "end", x.End.Format(time.DateOnly))
+	}
+	for _, u := range a.Update {
+		slog.Info("update", "title", u.Event.Title, "term", u.Event.TermID, "start", u.Event.Start.Format(time.DateOnly), "end", u.Event.End.Format(time.DateOnly))
+	}
+	for _, e := range a.Create {
+		slog.Info("create", "title", e.Title, "term", e.TermID, "start", e.Start.Format(time.DateOnly), "end", e.End.Format(time.DateOnly))
+	}
+	if dryRun {
+		fmt.Fprintf(summary, "dry-run: create=%d update=%d delete=%d unchanged=%d skipped=%d\n",
+			len(a.Create), len(a.Update), len(a.Delete), a.Unchanged, skipped)
+		return nil
+	}
+
+	for _, x := range a.Delete {
+		if err := client.Delete(ctx, x.ID); err != nil {
+			return fmt.Errorf("deleting event %q: %w", x.Title, err)
+		}
+	}
+	for _, u := range a.Update {
+		if err := client.Update(ctx, u.ID, u.Event); err != nil {
+			return fmt.Errorf("updating event %q: %w", u.Event.Title, err)
+		}
+	}
+	for _, e := range a.Create {
+		if err := client.Insert(ctx, e); err != nil {
+			return fmt.Errorf("creating event %q: %w", e.Title, err)
+		}
+	}
+	fmt.Fprintf(summary, "created=%d updated=%d deleted=%d unchanged=%d skipped=%d\n",
+		len(a.Create), len(a.Update), len(a.Delete), a.Unchanged, skipped)
 	return nil
 }
 

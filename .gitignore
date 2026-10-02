@@ -1,5 +1,6 @@
 bin/
 .env
 credentials*.json
+client_secret*.json
 token*.json
 secrets/

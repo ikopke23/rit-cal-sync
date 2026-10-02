@@ -1,0 +1,5 @@
+bin/
+.env
+credentials*.json
+token*.json
+secrets/

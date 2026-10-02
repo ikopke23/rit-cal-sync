@@ -2,6 +2,8 @@ package gcal
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -73,6 +75,39 @@ func TestWithRetry(t *testing.T) {
 			}
 			if calls != tt.wantCalls {
 				t.Errorf("got %d calls, want %d", calls, tt.wantCalls)
+			}
+		})
+	}
+}
+
+func TestLoadToken(t *testing.T) {
+	dir := t.TempDir()
+	tests := []struct {
+		name    string
+		content *string
+		wantNil bool
+		wantErr bool
+	}{
+		{name: "missing", content: nil, wantNil: true},
+		{name: "empty", content: new(""), wantNil: true},
+		{name: "whitespace", content: new(" \n"), wantNil: true},
+		{name: "valid", content: new(`{"access_token":"a","refresh_token":"r"}`)},
+		{name: "corrupt", content: new("{not json"), wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(dir, tt.name+".json")
+			if tt.content != nil {
+				if err := os.WriteFile(path, []byte(*tt.content), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			tok, err := loadToken(path)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("got err %v, want err %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && (tok == nil) != tt.wantNil {
+				t.Errorf("got nil token %v, want %v", tok == nil, tt.wantNil)
 			}
 		})
 	}

@@ -2,6 +2,7 @@ package gcal
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -86,6 +87,7 @@ func NewService(ctx context.Context, credsFile, tokenFile string, in io.Reader, 
 }
 
 // loadToken reads a saved token, returning nil without error if none exists.
+// An empty file counts as none, so a pre-created placeholder triggers consent.
 func loadToken(path string) (*oauth2.Token, error) {
 	b, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
@@ -93,6 +95,9 @@ func loadToken(path string) (*oauth2.Token, error) {
 	}
 	if err != nil {
 		return nil, fmt.Errorf("reading oauth token: %w", err)
+	}
+	if len(bytes.TrimSpace(b)) == 0 {
+		return nil, nil
 	}
 	var tok oauth2.Token
 	if err := json.Unmarshal(b, &tok); err != nil {

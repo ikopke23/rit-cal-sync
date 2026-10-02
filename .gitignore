@@ -2,5 +2,7 @@ bin/
 .env
 credentials*.json
 client_secret*.json
+*creds*.json
+gtoken*
 token*.json
 secrets/

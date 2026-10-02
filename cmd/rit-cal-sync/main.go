@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -43,6 +44,7 @@ func run(ctx context.Context) error {
 	parseOnly := flag.Bool("parse-only", false, "scrape and parse only; no Google access or credentials needed")
 	dumpJSON := flag.String("dump-json", "", "write parsed events as JSON to `path` (- for stdout)")
 	showVersion := flag.Bool("version", false, "print version and exit")
+	flag.Usage = usage
 	flag.Parse()
 	if *showVersion {
 		fmt.Fprintln(os.Stdout, version)
@@ -135,6 +137,17 @@ func syncEvents(ctx context.Context, cfg config.Config, events []scrape.Event, s
 	fmt.Fprintf(summary, "created=%d updated=%d deleted=%d unchanged=%d skipped=%d\n",
 		len(a.Create), len(a.Update), len(a.Delete), a.Unchanged, skipped)
 	return nil
+}
+
+// usage prints the flags with GNU-style "--" prefixes. The flag package
+// accepts both, but its default output shows a single dash.
+func usage() {
+	out := flag.CommandLine.Output()
+	fmt.Fprintf(out, "Usage: rit-cal-sync [flags]\n\nFlags:\n")
+	flag.VisitAll(func(f *flag.Flag) {
+		arg, help := flag.UnquoteUsage(f)
+		fmt.Fprintf(out, "  --%s\n    \t%s\n", strings.TrimSpace(f.Name+" "+arg), help)
+	})
 }
 
 // writeJSON dumps events to stdout when path is "-", otherwise to a file.

@@ -29,7 +29,7 @@ type Config struct {
 
 // Load reads the environment (after an optional .env) and applies defaults.
 // When requireGoogle is true it fails on the first missing Google variable,
-// so a sync never starts half-configured; -parse-only passes false.
+// so a sync never starts half-configured; --parse-only passes false.
 func Load(requireGoogle bool) (Config, error) {
 	_ = godotenv.Load() // optional; env vars already set take precedence
 	cfg := Config{

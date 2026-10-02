@@ -85,17 +85,17 @@ in the working directory is loaded too; real environment variables win. Copy
 | `HTTP_TIMEOUT` | `30s` | Go duration for the page fetch. |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`. |
 
-`-parse-only` doesn't need any of the Google variables.
+`--parse-only` doesn't need any of the Google variables.
 
 ## Running
 
 Requires Go 1.26+.
 
 ```bash
-make build                                  # → bin/rit-cal-sync
-./bin/rit-cal-sync -parse-only -dump-json - # scrape + parse only, print JSON
-./bin/rit-cal-sync -dry-run                 # read Google, show the plan, write nothing
-./bin/rit-cal-sync                          # sync for real
+make build                                    # → bin/rit-cal-sync
+./bin/rit-cal-sync --parse-only --dump-json - # scrape + parse only, print JSON
+./bin/rit-cal-sync --dry-run                  # read Google, show the plan, write nothing
+./bin/rit-cal-sync                            # sync for real
 ```
 
 ### Docker
@@ -123,7 +123,7 @@ GOOGLE_TOKEN_FILE=/secrets/token.json
 Then run it. Keep `-it` so the consent prompt can read your paste:
 
 ```bash
-docker run -it --rm --env-file .env -v $PWD/secrets:/secrets rit-cal-sync -dry-run
+docker run -it --rm --env-file .env -v $PWD/secrets:/secrets rit-cal-sync --dry-run
 docker run -it --rm --env-file .env -v $PWD/secrets:/secrets rit-cal-sync
 ```
 
@@ -142,18 +142,19 @@ consent. It fails fast with "no valid OAuth token" and exits 1. Run it once with
 
 ## Flags
 
-Standard Go flags: single dash, double dash also works.
+Long flags use `--`. (A single dash is also accepted, since these are Go
+stdlib flags.)
 
 | Flag | Effect |
 |---|---|
-| `-dry-run` | Read the calendar and print planned actions. No writes. |
-| `-parse-only` | Fetch and parse only. No Google calls, no credentials needed. |
-| `-dump-json <path\|->` | Write the parsed events as JSON to a file, or `-` for stdout. |
-| `-version` | Print the version and exit. |
+| `--dry-run` | Read the calendar and print planned actions. No writes. |
+| `--parse-only` | Fetch and parse only. No Google calls, no credentials needed. |
+| `--dump-json <path\|->` | Write the parsed events as JSON to a file, or `-` for stdout. |
+| `--version` | Print the version and exit. |
 
 ## Output and exit codes
 
-The summary goes to stdout; logs go to stderr. With `-dump-json -` the JSON
+The summary goes to stdout; logs go to stderr. With `--dump-json -` the JSON
 owns stdout, so the summary moves to stderr and the dump stays pipeable to `jq`.
 
 ```
@@ -162,7 +163,7 @@ dry-run: create=3 update=1 delete=0 unchanged=31 skipped=0
 parsed=35 skipped=0
 ```
 
-The first line is a real sync, the second `-dry-run`, the third `-parse-only`.
+The first line is a real sync, the second `--dry-run`, the third `--parse-only`.
 
 | Code | Meaning |
 |---|---|

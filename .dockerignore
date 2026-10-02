@@ -1,0 +1,10 @@
+.git
+bin/
+.env
+credentials*.json
+token*.json
+secrets/
+testdata/
+**/testdata/
+*.md
+!README.md
